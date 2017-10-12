@@ -115,6 +115,13 @@ func (engine *Engine) getPreFetch(digest digest.Digest) (request *http.Request, 
 		Method: "GET",
 		URL:    engine.base.ResolveReference(parsedReference),
 	}
+
+	// FIXME: ResolveReference panics in Go go1.9.1 when engine.base is
+	// nil and parsedReference is relative.
+	// https://github.com/golang/go/issues/22229
+	// After the panic is resolved in Go, we'll want to catch that case
+	// down here.
+
 	return request, nil
 }
 

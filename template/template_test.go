@@ -208,12 +208,7 @@ func TestGetPreFetchBad(t *testing.T) {
 		"uri": "{+digest}",
 	}
 
-	base, err := url.Parse("https://example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	engine, err := New(ctx, base, config)
+	engine, err := New(ctx, nil, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,6 +224,11 @@ func TestGetPreFetchBad(t *testing.T) {
 			digest:   ":",
 			expected: "parse :: missing protocol scheme",
 		},
+		//{
+		//	name:     "relative reference with unanchored engine",
+		//	digest:   "blob",
+		//	expected: "FIXME panic https://github.com/golang/go/issues/22229",
+		//},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			request, err := engine.(*Engine).getPreFetch(testcase.digest)
