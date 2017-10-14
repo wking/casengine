@@ -220,9 +220,9 @@ func TestGetPreFetchBad(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "no scheme",
-			digest:   ":",
-			expected: "parse :: missing protocol scheme",
+			name:     "no algorithm identifier",
+			digest:   ":0123456789abcdef",
+			expected: "parse :0123456789abcdef: missing protocol scheme",
 		},
 		//{
 		//	name:     "relative reference with unanchored engine",
