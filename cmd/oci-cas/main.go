@@ -118,6 +118,7 @@ func main() {
 				}
 				continue DigestLoop
 			}
+			return fmt.Errorf("failed to retrieve %s", digest)
 		}
 
 		return nil
