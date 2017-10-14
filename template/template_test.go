@@ -222,6 +222,12 @@ func TestGetPreFetchBad(t *testing.T) {
 			digest:   "some-algorithm:0123456789abcdef",
 			expected: "cannot resolve relative 0123456789abcdef without a base engine URI",
 		},
+		//{
+		//	name:     "no colon in digest",
+		//	uri:      "{algorithm}",
+		//	digest:   "some-algorithm",
+		//	expected: `panic: no ':' separator in digest "some-algorithm"`,
+		//},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			config := map[string]string{
