@@ -204,33 +204,36 @@ func TestGetPreFetchGood(t *testing.T) {
 
 func TestGetPreFetchBad(t *testing.T) {
 	ctx := context.Background()
-	config := map[string]string{
-		"uri": "{+digest}",
-	}
-
-	engine, err := New(ctx, nil, config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer engine.Close(ctx)
-
 	for _, testcase := range []struct {
 		name     string
+		uri      string
 		digest   digest.Digest
 		expected string
 	}{
 		{
 			name:     "no algorithm identifier",
+			uri:      "{+digest}",
 			digest:   ":0123456789abcdef",
 			expected: "parse :0123456789abcdef: missing protocol scheme",
 		},
-		//{
-		//	name:     "relative reference with unanchored engine",
-		//	digest:   "blob",
-		//	expected: "FIXME panic https://github.com/golang/go/issues/22229",
-		//},
+		{
+			name:     "relative reference with unanchored engine",
+			uri:      "{encoded}",
+			digest:   "some-algorithm:0123456789abcdef",
+			expected: "cannot resolve relative 0123456789abcdef without a base engine URI",
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
+			config := map[string]string{
+				"uri": testcase.uri,
+			}
+
+			engine, err := New(ctx, nil, config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer engine.Close(ctx)
+
 			request, err := engine.(*Engine).getPreFetch(testcase.digest)
 			if err == nil {
 				t.Fatalf("returned %s and did not raise the expected error", request.URL)
