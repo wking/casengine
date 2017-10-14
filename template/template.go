@@ -80,7 +80,7 @@ func (engine *Engine) Get(ctx context.Context, digest digest.Digest) (reader io.
 	request = request.WithContext(ctx)
 
 	client := &http.Client{}
-	logrus.Debugf("requesting %s from %s", request.Header.Get("accept"), request.URL)
+	logrus.Debugf("requesting %s from %s", digest, request.URL)
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, err
