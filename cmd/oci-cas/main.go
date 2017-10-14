@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/opencontainers/go-digest"
@@ -45,6 +46,10 @@ func main() {
 			Value: "error",
 			Usage: "Log level (panic, fatal, error, warn, info, or debug)",
 		},
+		cli.StringFlag{
+			Name:  "file",
+			Usage: "Effective root for file URIs.  To allow access to your entire filesystem, use '--file /'.  More restricted values are recommended to avoid accessing sensitive information.  The default is to disable file URIs entirely; you must set this flag to enable them.",
+		},
 	}
 
 	app.Before = func(c *cli.Context) (err error) {
@@ -60,6 +65,12 @@ func main() {
 
 	app.Action = func(c *cli.Context) (err error) {
 		ctx := context.Background()
+
+		if c.GlobalIsSet("file") {
+			path := c.GlobalString("file")
+			transport := http.NewFileTransport(http.Dir(path))
+			http.DefaultTransport.(*http.Transport).RegisterProtocol("file", transport)
+		}
 
 		var configReferences []engine.Reference
 		err = json.NewDecoder(os.Stdin).Decode(&configReferences)

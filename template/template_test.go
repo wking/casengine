@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/stretchr/testify/assert"
 	"github.com/wking/casengine"
+	"github.com/wking/fakefs"
 	"github.com/xiekeyang/oci-discovery/tools/engine"
 	"golang.org/x/net/context"
 )
@@ -379,4 +381,63 @@ func TestGetPostFetchBad(t *testing.T) {
 			assert.Regexp(t, testcase.expected, err.Error())
 		})
 	}
+}
+
+func TestGet(t *testing.T) {
+	ctx := context.Background()
+	bodyIn := "Hello, World!"
+
+	fakeFS := &fakefs.FileSystem{
+		Files: map[string]*fakefs.Opener{
+			"/dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f": &fakefs.Opener{
+				Content: bodyIn,
+			},
+		},
+	}
+	transport := &http.Transport{}
+	transport.RegisterProtocol("file", http.NewFileTransport(fakeFS))
+
+	config := map[string]string{
+		"uri": "file:///{encoded}",
+	}
+
+	engine, err := New(ctx, nil, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(ctx)
+
+	engine.(*Engine).Client = &http.Client{
+		Transport: transport,
+	}
+
+	t.Run("good", func(t *testing.T) {
+		digest, err := digest.Parse("sha256:dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		reader, err := engine.Get(ctx, digest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer reader.Close()
+
+		bodyOut, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(t, bodyIn, string(bodyOut))
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		digest, err := digest.Parse("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = engine.Get(ctx, digest)
+		assert.Equal(t, os.ErrNotExist, err)
+	})
 }

@@ -34,6 +34,15 @@ import (
 type Engine struct {
 	uri  *uritemplates.UriTemplate
 	base *url.URL
+
+	// Client allows callers to configure the HTTP client.  Get will use
+	// http.DefaultClient if Client is not set.  You can set this
+	// property with:
+	//
+	//   engine, err := New(ctx, nil, config)
+	//   // handle err and possibly engine.Close(ctx)
+	//   engine.(*Engine).Client = yourCustomClient
+	Client *http.Client
 }
 
 // New creates a new CAS-engine instance.
@@ -79,7 +88,10 @@ func (engine *Engine) Get(ctx context.Context, digest digest.Digest) (reader io.
 	}
 	request = request.WithContext(ctx)
 
-	client := &http.Client{}
+	client := engine.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
 	logrus.Debugf("requesting %s from %s", digest, request.URL)
 	response, err := client.Do(request)
 	if err != nil {
