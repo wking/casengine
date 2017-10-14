@@ -27,9 +27,10 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/stretchr/testify/assert"
 	"github.com/wking/casengine"
-	"github.com/wking/fakefs"
 	"github.com/xiekeyang/oci-discovery/tools/engine"
 	"golang.org/x/net/context"
+	"golang.org/x/tools/godoc/vfs/httpfs"
+	"golang.org/x/tools/godoc/vfs/mapfs"
 )
 
 func TestRegistration(t *testing.T) {
@@ -387,13 +388,9 @@ func TestGet(t *testing.T) {
 	ctx := context.Background()
 	bodyIn := "Hello, World!"
 
-	fakeFS := &fakefs.FileSystem{
-		Files: map[string]*fakefs.Opener{
-			"/dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f": &fakefs.Opener{
-				Content: bodyIn,
-			},
-		},
-	}
+	fakeFS := httpfs.New(mapfs.New(map[string]string{
+		"dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f": bodyIn,
+	}))
 	transport := &http.Transport{}
 	transport.RegisterProtocol("file", http.NewFileTransport(fakeFS))
 
