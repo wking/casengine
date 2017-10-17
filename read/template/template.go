@@ -107,7 +107,8 @@ func (engine *Engine) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func (engine *Engine) getPreFetch(digest digest.Digest) (request *http.Request, err error) {
+// URI returns the expanded, resolved URI for digest.
+func (engine *Engine) URI(digest digest.Digest) (uri *url.URL, err error) {
 	values := map[string]interface{}{
 		"digest":    string(digest),
 		"algorithm": string(digest.Algorithm()),
@@ -128,12 +129,19 @@ func (engine *Engine) getPreFetch(digest digest.Digest) (request *http.Request, 
 		return nil, fmt.Errorf("cannot resolve relative %s without a base engine URI", parsedReference)
 	}
 
-	request = &http.Request{
-		Method: "GET",
-		URL:    engine.base.ResolveReference(parsedReference),
+	return engine.base.ResolveReference(parsedReference), nil
+}
+
+func (engine *Engine) getPreFetch(digest digest.Digest) (request *http.Request, err error) {
+	uri, err := engine.URI(digest)
+	if err != nil {
+		return nil, err
 	}
 
-	return request, nil
+	return &http.Request{
+		Method: "GET",
+		URL:    uri,
+	}, nil
 }
 
 func (engine *Engine) getPostFetch(response *http.Response, digest digest.Digest) (reader io.ReadCloser, err error) {
