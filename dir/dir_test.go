@@ -54,31 +54,9 @@ func TestGood(t *testing.T) {
 		ctx,
 		temp,
 		"blobs/{algorithm}/{encoded:2}/{encoded}",
-		func(path string) (dig digest.Digest, err error) {
-			matches := make(map[string]string)
-			submatches := getDigestRegexp.FindStringSubmatch(path)
-			for i, submatchName := range getDigestRegexp.SubexpNames() {
-				if submatchName == "" {
-					continue
-				}
-				if i > len(submatches) {
-					return "", fmt.Errorf("%q does not match %q", path, pattern)
-				}
-				matches[submatchName] = submatches[i]
-			}
-
-			algorithm, ok := matches["algorithm"]
-			if !ok {
-				return "", fmt.Errorf("no 'algorithm' capturing group in %q", pattern)
-			}
-
-			encoded, ok := matches["encoded"]
-			if !ok {
-				return "", fmt.Errorf("no 'encoded' capturing group in %q", pattern)
-			}
-
-			return digest.Parse(fmt.Sprintf("%s:%s", algorithm, encoded))
-		},
+		(&RegexpGetDigest{
+			Regexp: getDigestRegexp,
+		}).GetDigest,
 	)
 	if err != nil {
 		t.Fatal(err)

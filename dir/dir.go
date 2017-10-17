@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -37,6 +38,12 @@ import (
 // and is required to support Digests.
 type GetDigest func(path string) (digest digest.Digest, err error)
 
+// RegexpGetDigest is a helper structure for regular-expression based
+// GetDigest implementations.
+type RegexpGetDigest struct {
+	Regexp *regexp.Regexp
+}
+
 // Engine is a CAS engine based on the local filesystem.
 type Engine struct {
 	path      string
@@ -46,6 +53,33 @@ type Engine struct {
 
 	// Algorithm selects the Algorithm used for Put.
 	Algorithm digest.Algorithm
+}
+
+// GetDigest implements GetDigest for RegexpGetDigest.
+func (r *RegexpGetDigest) GetDigest(path string) (dig digest.Digest, err error) {
+	matches := make(map[string]string)
+	submatches := r.Regexp.FindStringSubmatch(path)
+	for i, submatchName := range r.Regexp.SubexpNames() {
+		if submatchName == "" {
+			continue
+		}
+		if i > len(submatches) {
+			return "", fmt.Errorf("%q does not match %q", path, r.Regexp.String())
+		}
+		matches[submatchName] = submatches[i]
+	}
+
+	algorithm, ok := matches["algorithm"]
+	if !ok {
+		return "", fmt.Errorf("no 'algorithm' capturing group in %q", r.Regexp.String())
+	}
+
+	encoded, ok := matches["encoded"]
+	if !ok {
+		return "", fmt.Errorf("no 'encoded' capturing group in %q", r.Regexp.String())
+	}
+
+	return digest.Parse(fmt.Sprintf("%s:%s", algorithm, encoded))
 }
 
 // New creates a new CAS-engine instance.
