@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package casengine implements the CAS-engine protocol registry and
-// defines the common interfaces.
-package casengine
+// Package read implements the CAS-engine protocol registry.
+package read
+
+import (
+	"net/url"
+
+	"github.com/wking/casengine"
+	"golang.org/x/net/context"
+)
+
+// New creates a new CAS-engine ReadCloser.
+type New func(ctx context.Context, baseURI *url.URL, config interface{}) (engine casengine.ReadCloser, err error)
 
 // Constructors holds CAS-engine generators associated with registered
 // protocol identifiers.

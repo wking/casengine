@@ -27,6 +27,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 	"github.com/wking/casengine"
+	"github.com/wking/casengine/read"
 	"golang.org/x/net/context"
 )
 
@@ -46,7 +47,7 @@ type Engine struct {
 }
 
 // New creates a new CAS-engine instance.
-func New(ctx context.Context, baseURI *url.URL, config interface{}) (engine casengine.Engine, err error) {
+func New(ctx context.Context, baseURI *url.URL, config interface{}) (engine casengine.ReadCloser, err error) {
 	configMap, ok := config.(map[string]string)
 	if !ok {
 		configMap2, ok := config.(map[string]interface{})
@@ -154,5 +155,5 @@ func (engine *Engine) getPostFetch(response *http.Response, digest digest.Digest
 }
 
 func init() {
-	casengine.Constructors["oci-cas-template-v1"] = New
+	read.Constructors["oci-cas-template-v1"] = New
 }

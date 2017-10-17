@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package casengine defines common interfaces for CAS engines.
 package casengine
 
 import (
 	"io"
-	"net/url"
 
 	"github.com/opencontainers/go-digest"
 	"golang.org/x/net/context"
 )
 
-// Engine represents a content-addressable storage engine.
-type Engine interface {
+// Reader represents a content-addressable storage engine reader.
+type Reader interface {
 
 	// Get returns a reader for retrieving a blob from the store.
 	// Returns os.ErrNotExist if the digest is not found.
@@ -43,11 +43,19 @@ type Engine interface {
 	//
 	// for streaming verification.
 	Get(ctx context.Context, digest digest.Digest) (reader io.ReadCloser, err error)
+}
+
+// Closer represents a content-addressable storage engine closer.
+type Closer interface {
 
 	// Close releases resources held by the engine.  Subsequent engine
 	// method calls will fail.
 	Close(ctx context.Context) (err error)
 }
 
-// New creates a new CAS-engine instance.
-type New func(ctx context.Context, baseURI *url.URL, config interface{}) (engine Engine, err error)
+// ReadCloser is the interface that groups the basic Reader and Closer
+// interfaces.
+type ReadCloser interface {
+	Reader
+	Closer
+}

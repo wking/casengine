@@ -26,7 +26,7 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	"github.com/stretchr/testify/assert"
-	"github.com/wking/casengine"
+	"github.com/wking/casengine/read"
 	"github.com/xiekeyang/oci-discovery/tools/engine"
 	"golang.org/x/net/context"
 	"golang.org/x/tools/godoc/vfs/httpfs"
@@ -34,7 +34,7 @@ import (
 )
 
 func TestRegistration(t *testing.T) {
-	_, ok := casengine.Constructors["oci-cas-template-v1"]
+	_, ok := read.Constructors["oci-cas-template-v1"]
 	if !ok {
 		t.Fatalf("failed to register oci-cas-template-v1")
 	}
