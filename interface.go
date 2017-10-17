@@ -152,7 +152,12 @@ type Writer interface {
 	// Put adds a new blob to the store.  The action is idempotent; a
 	// nil return means "that content is stored at DIGEST" without
 	// implying "because of your Put()".
-	Put(ctx context.Context, reader io.Reader) (digest digest.Digest, err error)
+	//
+
+	// The algorithm argument allows you to require a particular digest
+	// algorithm.  Set to the empty string to allow the Writer to use
+	// its preferred algorithm.
+	Put(ctx context.Context, algorithm digest.Algorithm, reader io.Reader) (digest digest.Digest, err error)
 }
 
 // Deleter represents a content-addressable storage engine deleter.

@@ -176,8 +176,11 @@ func (engine *Engine) Digests(ctx context.Context, algorithm digest.Algorithm, p
 }
 
 // Put implements Writer.Put.
-func (engine *Engine) Put(ctx context.Context, reader io.Reader) (dig digest.Digest, err error) {
-	digester := engine.Algorithm.Digester()
+func (engine *Engine) Put(ctx context.Context, algorithm digest.Algorithm, reader io.Reader) (dig digest.Digest, err error) {
+	if algorithm.String() == "" {
+		algorithm = engine.Algorithm
+	}
+	digester := algorithm.Digester()
 
 	file, err := ioutil.TempFile(engine.temp, "blob-")
 	if err != nil {

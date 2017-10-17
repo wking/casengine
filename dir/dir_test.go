@@ -85,15 +85,10 @@ func TestGood(t *testing.T) {
 	}
 	defer engine.Close(ctx)
 
-	dirEngine, ok := engine.(*Engine)
-	if !ok {
-		t.Fatalf("template.New() did not return a *template.Engine")
-	}
-
 	var digestSha256 digest.Digest
 	bodyIn := "Hello, World!"
 	t.Run("put default algorithm", func(t *testing.T) {
-		digestSha256, err = engine.Put(ctx, strings.NewReader(bodyIn))
+		digestSha256, err = engine.Put(ctx, "", strings.NewReader(bodyIn))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -107,12 +102,7 @@ func TestGood(t *testing.T) {
 
 	var digestSha512 digest.Digest
 	t.Run("put SHA-512", func(t *testing.T) {
-		dirEngine.Algorithm = digest.SHA512
-		defer func() {
-			dirEngine.Algorithm = digest.SHA256
-		}()
-
-		digestSha512, err = engine.Put(ctx, strings.NewReader(bodyIn))
+		digestSha512, err = engine.Put(ctx, digest.SHA512, strings.NewReader(bodyIn))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -215,7 +205,7 @@ func TestGood(t *testing.T) {
 
 	t.Run("digests", func(t *testing.T) {
 		// Inject sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-		_, err = engine.Put(ctx, strings.NewReader(""))
+		_, err = engine.Put(ctx, "", strings.NewReader(""))
 		if err != nil {
 			t.Fatal(err)
 		}
