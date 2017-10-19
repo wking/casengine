@@ -84,7 +84,7 @@ func (r *RegexpGetDigest) GetDigest(path string) (dig digest.Digest, err error) 
 
 // New creates a new CAS-engine instance.
 func New(ctx context.Context, path string, uri string, getDigest GetDigest) (engine casengine.Engine, err error) {
-	temp, err := ioutil.TempDir(path, "tmp-")
+	temp, err := ioutil.TempDir(path, ".casengine-")
 	if err != nil {
 		return nil, err
 	}
