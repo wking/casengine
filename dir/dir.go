@@ -46,7 +46,6 @@ type RegexpGetDigest struct {
 
 // Engine is a CAS engine based on the local filesystem.
 type Engine struct {
-	path      string
 	temp      string
 	reader    *template.Engine
 	getDigest GetDigest
@@ -82,14 +81,19 @@ func (r *RegexpGetDigest) GetDigest(path string) (dig digest.Digest, err error) 
 	return digest.Parse(fmt.Sprintf("%s:%s", algorithm, encoded))
 }
 
-// New creates a new CAS-engine instance.
+// New creates a new CAS-engine instance.  The path argument is used
+// as a base for expanding relative URIs and as a base for creating a
+// temporary directory for storing partially-Put blobs.  Moving the
+// completed blob to its final location is more likely to be atomic if
+// that temporary directory is on the same filesystem as the final
+// location.
 func New(ctx context.Context, path string, uri string, getDigest GetDigest) (engine casengine.Engine, err error) {
 	temp, err := ioutil.TempDir(path, ".casengine-")
 	if err != nil {
 		return nil, err
 	}
 
-	base, err := url.Parse("file:///")
+	base, err := url.Parse("file://" + path)
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +112,15 @@ func New(ctx context.Context, path string, uri string, getDigest GetDigest) (eng
 		return nil, fmt.Errorf("template.New() did not return a *template.Engine")
 	}
 
+	if filepath.Separator != '/' {
+		return nil, fmt.Errorf("root path not implemented for filepath.Separator %q", filepath.Separator)
+	}
+
 	readEngine.Client = &http.Client{
-		Transport: http.NewFileTransport(http.Dir(path)),
+		Transport: http.NewFileTransport(http.Dir("/")),
 	}
 
 	return &Engine{
-		path:      path,
 		temp:      temp,
 		reader:    readEngine,
 		getDigest: getDigest,
@@ -178,15 +185,9 @@ func (engine *Engine) Digests(ctx context.Context, algorithm digest.Algorithm, p
 	offset := 0
 	count := 0
 	for _, match := range matches {
-		rel, err := filepath.Rel(engine.path, match)
+		digest, err := engine.getDigest(match)
 		if err != nil {
-			logrus.Warnf("cannot compute relative digest path %q (%s)", match, err)
-			continue
-		}
-
-		digest, err := engine.getDigest(rel)
-		if err != nil {
-			logrus.Warnf("cannot compute digest for %q (%s)", rel, err)
+			logrus.Warnf("cannot compute digest for %q (%s)", match, err)
 			continue
 		}
 
@@ -294,5 +295,5 @@ func (engine *Engine) getPath(digest digest.Digest) (path string, err error) {
 		return "", fmt.Errorf("invalid URI: %q", uri)
 	}
 
-	return filepath.Join(engine.path, strings.TrimLeft(uri.Path, "/")), nil
+	return filepath.Join(uri.Path), nil
 }

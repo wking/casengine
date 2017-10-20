@@ -37,7 +37,7 @@ func TestGood(t *testing.T) {
 	}
 	defer os.RemoveAll(temp)
 
-	pattern := `^blobs/(?P<algorithm>[a-z0-9+._-]+)/[a-zA-Z0-9=_-]{1,2}/(?P<encoded>[a-zA-Z0-9=_-]{1,})$`
+	pattern := `^.*/blobs/(?P<algorithm>[a-z0-9+._-]+)/[a-zA-Z0-9=_-]{1,2}/(?P<encoded>[a-zA-Z0-9=_-]{1,})$`
 	if filepath.Separator != '/' {
 		if filepath.Separator == '\\' {
 			pattern = strings.Replace(pattern, "/", `\\`, -1)
@@ -50,10 +50,14 @@ func TestGood(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if filepath.Separator != '/' {
+		t.Fatalf("full URI not implemented for filepath.Separator %q", filepath.Separator)
+	}
+
 	engine, err := New(
 		ctx,
 		temp,
-		"blobs/{algorithm}/{encoded:2}/{encoded}",
+		fmt.Sprintf("file://%s/blobs/{algorithm}/{encoded:2}/{encoded}", temp),
 		(&RegexpGetDigest{
 			Regexp: getDigestRegexp,
 		}).GetDigest,
@@ -65,6 +69,19 @@ func TestGood(t *testing.T) {
 
 	var digestSha256 digest.Digest
 	bodyIn := "Hello, World!"
+	t.Run("put default algorithm", func(t *testing.T) {
+		digestSha256, err = engine.Put(ctx, "", strings.NewReader(bodyIn))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(
+			t,
+			"sha256:dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f",
+			digestSha256.String(),
+		)
+	})
+
 	t.Run("put default algorithm", func(t *testing.T) {
 		digestSha256, err = engine.Put(ctx, "", strings.NewReader(bodyIn))
 		if err != nil {
