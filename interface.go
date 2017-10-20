@@ -153,7 +153,6 @@ type Writer interface {
 	// nil return means "that content is stored at DIGEST" without
 	// implying "because of your Put()".
 	//
-
 	// The algorithm argument allows you to require a particular digest
 	// algorithm.  Set to the empty string to allow the Writer to use
 	// its preferred algorithm.
