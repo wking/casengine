@@ -200,12 +200,18 @@ type WriteCloser interface {
 }
 
 // Engine is the interface that groups all the basic interfaces
-// defined in this package.
+// defined in this package except for DigestLister.
 type Engine interface {
 	Reader
 	AlgorithmLister
-	DigestLister
 	Writer
 	Deleter
 	Closer
+}
+
+// DigestListerEngine is the interface that groups all the basic
+// interfaces defined in this package.
+type DigestListerEngine interface {
+	Engine
+	DigestLister
 }

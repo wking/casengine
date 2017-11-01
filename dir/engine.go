@@ -23,7 +23,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -33,61 +32,22 @@ import (
 	"golang.org/x/net/context"
 )
 
-// GetDigest calculates the digest corresponding to a given relative
-// path.  This is effectively the inverse of URI Template expansion,
-// and is required to support Digests.
-type GetDigest func(path string) (digest digest.Digest, err error)
-
-// RegexpGetDigest is a helper structure for regular-expression based
-// GetDigest implementations.
-type RegexpGetDigest struct {
-	Regexp *regexp.Regexp
-}
-
 // Engine is a CAS engine based on the local filesystem.
 type Engine struct {
-	temp      string
-	reader    *template.Engine
-	getDigest GetDigest
+	temp   string
+	reader *template.Engine
 
 	// Algorithm selects the Algorithm used for Put.
 	Algorithm digest.Algorithm
 }
 
-// GetDigest implements GetDigest for RegexpGetDigest.
-func (r *RegexpGetDigest) GetDigest(path string) (dig digest.Digest, err error) {
-	matches := make(map[string]string)
-	submatches := r.Regexp.FindStringSubmatch(path)
-	for i, submatchName := range r.Regexp.SubexpNames() {
-		if submatchName == "" {
-			continue
-		}
-		if i > len(submatches) {
-			return "", fmt.Errorf("%q does not match %q", path, r.Regexp.String())
-		}
-		matches[submatchName] = submatches[i]
-	}
-
-	algorithm, ok := matches["algorithm"]
-	if !ok {
-		return "", fmt.Errorf("no 'algorithm' capturing group in %q", r.Regexp.String())
-	}
-
-	encoded, ok := matches["encoded"]
-	if !ok {
-		return "", fmt.Errorf("no 'encoded' capturing group in %q", r.Regexp.String())
-	}
-
-	return digest.Parse(fmt.Sprintf("%s:%s", algorithm, encoded))
-}
-
-// New creates a new CAS-engine instance.  The path argument is used
-// as a base for expanding relative URIs and as a base for creating a
-// temporary directory for storing partially-Put blobs.  Moving the
-// completed blob to its final location is more likely to be atomic if
-// that temporary directory is on the same filesystem as the final
-// location.
-func New(ctx context.Context, path string, uri string, getDigest GetDigest) (engine casengine.Engine, err error) {
+// NewEngine creates a new CAS-engine instance.  The path argument is
+// used as a base for expanding relative URIs and as a base for
+// creating a temporary directory for storing partially-Put blobs.
+// Moving the completed blob to its final location is more likely to
+// be atomic if that temporary directory is on the same filesystem as
+// the final location.
+func NewEngine(ctx context.Context, path string, uri string) (engine casengine.Engine, err error) {
 	temp, err := ioutil.TempDir(path, ".casengine-")
 	if err != nil {
 		return nil, err
@@ -123,7 +83,6 @@ func New(ctx context.Context, path string, uri string, getDigest GetDigest) (eng
 	return &Engine{
 		temp:      temp,
 		reader:    readEngine,
-		getDigest: getDigest,
 		Algorithm: digest.SHA256,
 	}, nil
 }
@@ -157,54 +116,6 @@ func (engine *Engine) Algorithms(ctx context.Context, prefix string, size int, f
 				}
 			}
 			offset++
-		}
-	}
-	return nil
-}
-
-// Digests implements DigestLister.Digests.
-func (engine *Engine) Digests(ctx context.Context, algorithm digest.Algorithm, prefix string, size int, from int, callback casengine.DigestCallback) (err error) {
-	if size == 0 {
-		return nil
-	}
-	globAlgorithm := algorithm.String()
-	if globAlgorithm == "" {
-		globAlgorithm = "*"
-	}
-	globDigest := digest.Digest(fmt.Sprintf("%s:*", globAlgorithm))
-	glob, err := engine.getPath(globDigest)
-	if err != nil {
-		return err
-	}
-
-	matches, err := filepath.Glob(glob)
-	if err != nil {
-		return err
-	}
-
-	offset := 0
-	count := 0
-	for _, match := range matches {
-		digest, err := engine.getDigest(match)
-		if err != nil {
-			logrus.Warnf("cannot compute digest for %q (%s)", match, err)
-			continue
-		}
-
-		if algorithm.String() == "" || digest.Algorithm() == algorithm {
-			if prefix == "" || strings.HasPrefix(digest.Encoded(), prefix) {
-				if offset >= from {
-					err = callback(ctx, digest)
-					if err != nil {
-						return err
-					}
-					count++
-					if size != -1 && count >= size {
-						return nil
-					}
-				}
-				offset++
-			}
 		}
 	}
 	return nil
